@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="AC">
+  <rect width="64" height="64" rx="10" fill="#050608"/>
+  <rect x="2" y="2" width="60" height="60" rx="9" fill="none" stroke="#2a2d31"/>
+  <text
+    x="32"
+    y="32"
+    text-anchor="middle"
+    dominant-baseline="middle"
+    font-family="'Bebas Neue', 'Impact', sans-serif"
+    font-size="34"
+    letter-spacing="2"
+    fill="#f0f0f0"
+    dy="0.04em"
+  >AC</text>
+</svg>

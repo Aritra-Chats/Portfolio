@@ -1,0 +1,213 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── CSS Variables ─── */
+:root {
+  --bg: #0a0a0a;
+  --bg-1: #141414;
+  --bg-2: #1c1c1c;
+  --fg: #f0f0f0;
+  --fg-dim: #888;
+  --fg-muted: #444;
+  --border: rgba(240, 240, 240, 0.07);
+  --border-bright: rgba(240, 240, 240, 0.18);
+  --glow-sm: 0 0 20px rgba(240, 240, 240, 0.12);
+  --glow-md: 0 0 40px rgba(240, 240, 240, 0.2), 0 0 80px rgba(240, 240, 240, 0.06);
+  --glow-lg: 0 0 60px rgba(240, 240, 240, 0.3), 0 0 120px rgba(240, 240, 240, 0.1);
+  --orbit-radius: 150px;
+}
+
+/* ─── Base Reset ─── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: 'DM Sans', sans-serif;
+  overflow-x: hidden;
+}
+
+/* ─── Grain overlay ─── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+}
+
+/* ─── Hide All Scrollbars (page + internal scrollers) ─── */
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+/* ─── Orbit Animation ─── */
+@keyframes orbitSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes orbitCounterSpin {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to   { transform: translate(-50%, -50%) rotate(-360deg); }
+}
+
+.orbit-ring {
+  animation: orbitSpin 22s linear infinite;
+  will-change: transform;
+}
+
+.orbit-icon-inner {
+  animation: orbitCounterSpin 22s linear infinite;
+  will-change: transform;
+}
+
+/* ─── Avatar Glow (pulse) ─── */
+@keyframes avatarGlow {
+  0%, 100% {
+    box-shadow:
+      0 0 0 2px rgba(240,240,240,0.15),
+      0 0 30px rgba(240,240,240,0.12),
+      0 0 80px rgba(240,240,240,0.04);
+  }
+  50% {
+    box-shadow:
+      0 0 0 3px rgba(240,240,240,0.3),
+      0 0 50px rgba(240,240,240,0.22),
+      0 0 120px rgba(240,240,240,0.08);
+  }
+}
+
+.avatar-glow {
+  animation: avatarGlow 4s ease-in-out infinite;
+}
+
+/* ─── Tagline cycle ─── */
+@keyframes tagFadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes tagFadeOutUp {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(-8px); }
+}
+
+/* ─── Iris / Shutter ─── */
+@keyframes irisOpen {
+  0%   { clip-path: polygon(50% 50%, 50% 50%, 50% 50%, 50% 50%, 50% 50%, 50% 50%); }
+  100% { clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%); }
+}
+
+/* Shimmer sweep for cards */
+@keyframes shimmerSweep {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.shimmer-card {
+  background: linear-gradient(
+    90deg,
+    rgba(240,240,240,0) 0%,
+    rgba(240,240,240,0.04) 50%,
+    rgba(240,240,240,0) 100%
+  );
+  background-size: 200% auto;
+  animation: shimmerSweep 3s linear infinite;
+}
+
+/* ─── Network node pulse ─── */
+@keyframes nodePulse {
+  0%, 100% { r: 6; opacity: 0.6; }
+  50%       { r: 9; opacity: 1; }
+}
+
+@keyframes lineFlow {
+  0%   { stroke-dashoffset: 100; opacity: 0.2; }
+  50%  { stroke-dashoffset: 0;   opacity: 0.5; }
+  100% { stroke-dashoffset: -100; opacity: 0.2; }
+}
+
+/* ─── Prefers Reduced Motion ─── */
+@media (prefers-reduced-motion: reduce) {
+  .orbit-ring,
+  .orbit-icon-inner,
+  .avatar-glow,
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ─── Section label ─── */
+.section-index {
+  font-family: 'Bebas Neue', monospace;
+  font-size: 11px;
+  letter-spacing: 0.25em;
+  color: var(--fg-muted);
+  text-transform: uppercase;
+}
+
+/* ─── Utility: card base ─── */
+.card-base {
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+.card-base:hover {
+  border-color: var(--border-bright);
+  box-shadow: var(--glow-sm);
+}
+
+/* ─── Iris reveal overlay ─── */
+.iris-overlay {
+  position: absolute;
+  inset: 0;
+  background: var(--bg);
+  clip-path: circle(100% at 50% 50%);
+  transition: clip-path 1.2s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.iris-overlay.open {
+  clip-path: circle(0% at 50% 50%);
+}
+
+/* ─── Dossier layout ─── */
+.dossier-panel {
+  transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s ease;
+}
+
+/* ─── Mobile adjustments ─── */
+@media (max-width: 768px) {
+  :root {
+    --orbit-radius: 90px;
+  }
+}
+
+/* ─── Text selection ─── */
+::selection {
+  background: rgba(240,240,240,0.15);
+  color: #fff;
+}

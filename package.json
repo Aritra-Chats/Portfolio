@@ -1,0 +1,15 @@
+{
+  "name": "aritra-portfolio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Aritra Chatterjee — Portfolio · React + TypeScript + Express",
+  "scripts": {
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "install:all": "npm install --prefix frontend && npm install --prefix backend",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "cd backend && npm run build",
+    "build": "npm run build:frontend && npm run build:backend",
+    "start": "cd backend && npm start"
+  }
+}
