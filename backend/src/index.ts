@@ -6,8 +6,19 @@ import type { Request, Response } from 'express';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const allowedOrigins = (process.env.ALLOWED_ORIGIN || 'http://localhost:5173')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
-app.use(cors({ origin: process.env.ALLOWED_ORIGIN || 'http://localhost:5173' }));
+const smtpPort = Number.parseInt(process.env.SMTP_PORT || '587', 10);
+const smtpSecure = process.env.SMTP_SECURE === 'true' || smtpPort === 465;
+const smtpUser = process.env.SMTP_USER || '';
+const smtpPass = process.env.SMTP_PASS || '';
+const mailFrom = process.env.SMTP_FROM || smtpUser;
+const mailTo = process.env.EMAIL_TO || smtpUser;
+
+app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 
 // Serve static frontend build in production
@@ -15,7 +26,7 @@ const frontendBuildPath = path.join(__dirname, '../../frontend/dist');
 app.use(express.static(frontendBuildPath));
 
 // Contact form endpoint
-app.post('/api/contact', (req: Request, res: Response): void => {
+app.post('/api/contact', async (req: Request, res: Response): Promise<void> => {
   const { name, email, message } = req.body as Record<string, string | undefined>;
 
   if (!name || !email || !message) {
@@ -23,20 +34,28 @@ app.post('/api/contact', (req: Request, res: Response): void => {
     return;
   }
 
+  if (!smtpUser || !smtpPass || !mailFrom || !mailTo) {
+    res.status(503).json({
+      error: 'Email delivery is not configured on this backend.',
+    });
+    return;
+  }
+
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT || '587', 10),
-    secure: false,
+    port: smtpPort,
+    secure: smtpSecure,
     auth: {
-      user: process.env.SMTP_USER || '',
-      pass: process.env.SMTP_PASS || '',
+      user: smtpUser,
+      pass: smtpPass,
     },
   });
 
-  transporter
-    .sendMail({
-      from: `"Portfolio Contact" <${process.env.SMTP_USER}>`,
-      to: 'aritrachatterjee1904@gmail.com',
+  try {
+    await transporter.sendMail({
+      from: `"Portfolio Contact" <${mailFrom}>`,
+      to: mailTo,
+      replyTo: email,
       subject: `New message from ${name} — Portfolio`,
       html: `
         <div style="font-family:monospace;background:#0a0a0a;color:#f0f0f0;padding:24px;border-radius:8px;">
@@ -47,14 +66,13 @@ app.post('/api/contact', (req: Request, res: Response): void => {
           <p style="background:#1a1a1a;padding:12px;border-radius:4px;white-space:pre-wrap;">${message}</p>
         </div>
       `,
-    })
-    .then(() => {
-      res.json({ success: true, message: 'Message sent successfully.' });
-    })
-    .catch((err: unknown) => {
-      console.error('Email send failed:', err);
-      res.json({ success: true, message: 'Message received.' });
     });
+
+    res.json({ success: true, message: 'Message sent successfully.' });
+  } catch (err: unknown) {
+    console.error('Email send failed:', err);
+    res.status(500).json({ error: 'Failed to send message.' });
+  }
 });
 
 // Health check
