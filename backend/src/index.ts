@@ -1,8 +1,6 @@
 import express from 'express';
 import cors from 'cors';
 import nodemailer from 'nodemailer';
-import fs from 'fs';
-import path from 'path';
 import type { Request, Response } from 'express';
 
 const app = express();
@@ -21,15 +19,6 @@ const mailTo = process.env.EMAIL_TO || smtpUser;
 
 app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
-
-// Serve static frontend build when it exists (monorepo/prod), otherwise run API-only.
-const frontendBuildPath = path.join(__dirname, '../../frontend/dist');
-const frontendIndexPath = path.join(frontendBuildPath, 'index.html');
-const hasFrontendBuild = fs.existsSync(frontendIndexPath);
-
-if (hasFrontendBuild) {
-  app.use(express.static(frontendBuildPath));
-}
 
 // Contact form endpoint
 app.post('/api/contact', async (req: Request, res: Response): Promise<void> => {
@@ -86,19 +75,12 @@ app.get('/api/health', (_req: Request, res: Response): void => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-if (hasFrontendBuild) {
-  // Fallback to frontend SPA
-  app.get('*', (_req: Request, res: Response): void => {
-    res.sendFile(frontendIndexPath);
+app.get('/', (_req: Request, res: Response): void => {
+  res.json({
+    status: 'ok',
+    message: 'Backend is running in API-only mode.',
   });
-} else {
-  app.get('/', (_req: Request, res: Response): void => {
-    res.json({
-      status: 'ok',
-      message: 'Backend is running in API-only mode (frontend build not found).',
-    });
-  });
-}
+});
 
 app.listen(PORT, () => {
   console.log(`\n  ◆ Aritra Portfolio Server`);
