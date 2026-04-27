@@ -144,7 +144,10 @@ export default function HeroSection() {
     min: isMobile ? 80 : 132,
     max: isMobile ? 106 : 168,
   }); // orbit radius
-  const initialAvatarSize = 196; // 1.5x of 96
+  const initialAvatarSize = adaptiveViewportValue(viewport, 'x', isMobile ? 0.5 : 0.136, {
+    min: isMobile ? 156 : 180,
+    max: isMobile ? 206 : 220,
+  });
   const wordsLiftY = adaptiveViewportValue(viewport, 'y', isMobile ? -0.055 : -0.08, {
     min: isMobile ? -58 : -78,
     max: isMobile ? -34 : -52,
@@ -160,8 +163,8 @@ export default function HeroSection() {
   });
   const pillBottom = isMobile ? '10%' : '10.5%'; // ~1.25x from previous 14%
   const pillBottomRatio = isMobile ? 0.14 : 0.145;
-  const ringShiftX = adaptiveViewportValue(viewport, 'x', -0.015, {
-    min: -28,
+  const ringShiftX = adaptiveViewportValue(viewport, 'x', -0.0125, {
+    min: -32,
     max: -14,
   });
   const ringShiftY = adaptiveViewportValue(viewport, 'y', -0.106, {
