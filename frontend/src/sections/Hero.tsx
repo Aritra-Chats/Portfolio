@@ -164,12 +164,12 @@ export default function HeroSection() {
   const pillBottom = isMobile ? '10%' : '10.5%'; // ~1.25x from previous 14%
   const pillBottomRatio = isMobile ? 0.14 : 0.145;
   const ringShiftX = adaptiveViewportValue(viewport, 'x', -0.01, {
+    min: -512,
+    max: 512,
+  });
+  const ringShiftY = adaptiveViewportValue(viewport, 'y', -0.09, {
     min: -256,
     max: 256,
-  });
-  const ringShiftY = adaptiveViewportValue(viewport, 'y', -0.095, {
-    min: -128,
-    max: 128,
   });
   const scatterCards = useMemo(() => buildScatterCards(isMobile), [isMobile]);
 
