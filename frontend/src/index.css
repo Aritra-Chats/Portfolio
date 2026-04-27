@@ -24,7 +24,20 @@
 }
 
 html {
-  font-size: 16px;
+  /*
+   * Fluid root font-size — makes every rem-based Tailwind utility
+   * (text-*, p-*, m-*, w-*, h-*, gap-*, …) scale proportionally with the
+   * CSS viewport width, which already accounts for browser zoom.
+   *
+   * Formula: 100vw / 120  →  16 px at 1920 px viewport (our design baseline)
+   *
+   * At 125 % zoom on a 1080 p monitor:
+   *   CSS viewport = 1536 px → font-size = 12.8 px
+   *   Physical rendering     = 12.8 × 1.25 = 16 px  ✓ same as 100 % zoom
+   *
+   * clamp() keeps text legible on very narrow viewports and very wide ones.
+   */
+  font-size: clamp(10px, calc(100vw / 120), 20px);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -207,7 +220,7 @@ body::before {
 /* ─── Mobile adjustments ─── */
 @media (max-width: 768px) {
   :root {
-    --orbit-radius: 90px;
+    --orbit-radius: clamp(80px, 25vw, 106px);
   }
 }
 

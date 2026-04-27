@@ -27,11 +27,12 @@ export default function Navbar() {
 
   return (
     <motion.nav
-      className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-10 h-14"
+      className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 md:px-10"
       initial={{ y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
       style={{
+        height: 'clamp(44px, 3.5vw, 64px)',
         background: scrolled ? 'rgba(10,10,10,0.85)' : 'transparent',
         backdropFilter: scrolled ? 'blur(12px)' : 'none',
         borderBottom: scrolled ? '1px solid rgba(240,240,240,0.06)' : 'none',
@@ -101,7 +102,8 @@ export default function Navbar() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2 }}
-            className="absolute top-14 left-0 right-0 bg-ink-100/95 backdrop-blur-xl border-b border-white/5 py-4"
+            className="absolute left-0 right-0 bg-ink-100/95 backdrop-blur-xl border-b border-white/5 py-4"
+            style={{ top: 'clamp(44px, 3.5vw, 64px)' }}
           >
             <ul className="flex flex-col gap-1 px-6">
               {navItems.map((item) => (
