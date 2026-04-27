@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
 import { motion, useScroll, useTransform, useSpring } from 'framer-motion';
 import { metrics, orbitIcons, personal, skills } from '../data/portfolio';
+import { adaptiveViewportValue } from '../utils/viewport';
 
 /* ─── helpers ─────────────────────────────────────────────── */
 function useMediaQuery(query: string) {
@@ -139,16 +140,34 @@ export default function HeroSection() {
   const containerRef = useRef<HTMLDivElement>(null);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const viewport = useViewportSize();
-  const OR = isMobile ? 88 : 148; // orbit radius
+  const OR = adaptiveViewportValue(viewport, 'x', isMobile ? 0.23 : 0.103, {
+    min: isMobile ? 80 : 132,
+    max: isMobile ? 106 : 168,
+  }); // orbit radius
   const initialAvatarSize = 196; // 1.5x of 96
-  const wordsLiftY = isMobile ? -44 : -64;
+  const wordsLiftY = adaptiveViewportValue(viewport, 'y', isMobile ? -0.055 : -0.08, {
+    min: isMobile ? -58 : -78,
+    max: isMobile ? -34 : -52,
+  });
   const avatarLiftY = wordsLiftY * 2.5;
-  const expandedAvatarY = isMobile ? -144 : -384;
-  const scrollHintShiftY = isMobile ? 66 : 86;
+  const expandedAvatarY = adaptiveViewportValue(viewport, 'y', isMobile ? -0.24 : -0.48, {
+    min: isMobile ? -220 : -460,
+    max: isMobile ? -132 : -320,
+  });
+  const scrollHintShiftY = adaptiveViewportValue(viewport, 'y', isMobile ? 0.083 : 0.108, {
+    min: isMobile ? 50 : 70,
+    max: isMobile ? 78 : 96,
+  });
   const pillBottom = isMobile ? '10%' : '10.5%'; // ~1.25x from previous 14%
   const pillBottomRatio = isMobile ? 0.14 : 0.145;
-  const ringShiftX = -22;
-  const ringShiftY = -85;
+  const ringShiftX = adaptiveViewportValue(viewport, 'x', -0.015, {
+    min: -28,
+    max: -14,
+  });
+  const ringShiftY = adaptiveViewportValue(viewport, 'y', -0.106, {
+    min: -100,
+    max: -68,
+  });
   const scatterCards = useMemo(() => buildScatterCards(isMobile), [isMobile]);
 
   const { scrollYProgress } = useScroll({
@@ -231,7 +250,7 @@ export default function HeroSection() {
 
   return (
     <div ref={containerRef} style={{ height: '760vh' }}>
-      <motion.div className="sticky top-0 w-full overflow-hidden" style={{ height: '100vh' }}>
+      <motion.div className="hero-stage-height sticky top-0 w-full overflow-hidden">
 
         {/* solid stage backdrop so later sections don't bleed into this storyboard */}
         <div className="absolute inset-0" style={{ background: '#0a0a0a', zIndex: 0 }} />

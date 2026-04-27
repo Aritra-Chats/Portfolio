@@ -37,6 +37,11 @@ body {
   overflow-x: hidden;
 }
 
+.hero-stage-height {
+  height: 100vh;
+  height: 100dvh;
+}
+
 /* ─── Grain overlay ─── */
 body::before {
   content: '';
