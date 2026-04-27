@@ -163,8 +163,14 @@ export default function HeroSection() {
   });
   const pillBottom = isMobile ? '10%' : '10.5%'; // ~1.25x from previous 14%
   const pillBottomRatio = isMobile ? 0.14 : 0.145;
-  const ringShiftX = -24;
-  const ringShiftY = -85;
+  const ringShiftX = adaptiveViewportValue(viewport, 'x', -0.0105, {
+    min: -32,
+    max: -8,
+  });
+  const ringShiftY = adaptiveViewportValue(viewport, 'y', -0.106, {
+    min: -100,
+    max: -68,
+  });
   const scatterCards = useMemo(() => buildScatterCards(isMobile), [isMobile]);
 
   const { scrollYProgress } = useScroll({
@@ -259,13 +265,13 @@ export default function HeroSection() {
 
         {/* ══ ORBIT RING (plain div – no Framer Motion = no transform conflict) ══ */}
         <motion.div
-          className="absolute pointer-events-none"
-          style={{ opacity: orbitOp, zIndex: 2, top: '50%', left: '50%', x: ringShiftX, y: ringShiftY }}
+          className="absolute inset-0 pointer-events-none flex items-center justify-center"
+          style={{ opacity: orbitOp, zIndex: 2, x: ringShiftX, y: ringShiftY }}
         >
           {/* The orbit-ring div is NOT a motion.div so CSS animation works correctly */}
           <div
             className="orbit-ring relative"
-            style={{ width: OR * 2, height: OR * 2, flexShrink: 0, transform: 'translate(-50%, -50%)' }}
+            style={{ width: OR * 2, height: OR * 2, flexShrink: 0 }}
           >
             {orbitIcons.map((icon, i) => {
               const angle = (360 / orbitIcons.length) * i * (Math.PI / 180);
