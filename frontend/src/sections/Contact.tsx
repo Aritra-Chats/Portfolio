@@ -9,6 +9,7 @@ interface Node {
   id: string;
   label: string;
   icon: string;
+  iconSrc?: string;
   url: string;
   x: number;
   y: number;
@@ -19,7 +20,16 @@ const NODES: Node[] = [
   { id: 'email',    label: 'Email',    icon: '✉',  url: `mailto:${contact.email}`,   x: 300, y: 120, r: 22 },
   { id: 'linkedin', label: 'LinkedIn', icon: 'in',  url: contact.linkedin,             x: 480, y: 60,  r: 20 },
   { id: 'github',   label: 'GitHub',   icon: '◇',  url: contact.github,               x: 520, y: 200, r: 20 },
-  { id: 'itchio',   label: 'itch.io',  icon: '🎮', url: contact.itchio,               x: 120, y: 180, r: 18 },
+  {
+    id: 'itchio',
+    label: 'itch.io',
+    icon: '',
+    iconSrc: 'https://cdn.simpleicons.org/itchdotio/FA5C5C',
+    url: contact.itchio,
+    x: 120,
+    y: 180,
+    r: 18,
+  },
   { id: 'leetcode', label: 'LeetCode', icon: '⌨',  url: contact.leetcode,             x: 160, y: 60,  r: 18 },
 ];
 
@@ -123,15 +133,30 @@ function NetworkGraph() {
                 />
 
                 {/* Icon */}
-                <text
-                  x={node.x} y={node.y + 4}
-                  textAnchor="middle"
-                  fontSize={node.r * 0.8}
-                  fill={isHov ? '#fff' : '#999'}
-                  style={{ fontFamily: 'monospace', userSelect: 'none' }}
-                >
-                  {node.icon}
-                </text>
+                {node.iconSrc ? (
+                  <image
+                    href={node.iconSrc}
+                    x={node.x - node.r * 0.5}
+                    y={node.y - node.r * 0.5}
+                    width={node.r}
+                    height={node.r}
+                    style={{
+                      filter: isHov ? 'grayscale(100%) brightness(1.25)' : 'grayscale(100%) brightness(0.95)',
+                      userSelect: 'none',
+                      pointerEvents: 'none',
+                    }}
+                  />
+                ) : (
+                  <text
+                    x={node.x} y={node.y + 4}
+                    textAnchor="middle"
+                    fontSize={node.r * 0.8}
+                    fill={isHov ? '#fff' : '#999'}
+                    style={{ fontFamily: 'monospace', userSelect: 'none' }}
+                  >
+                    {node.icon}
+                  </text>
+                )}
 
                 {/* Label */}
                 <text

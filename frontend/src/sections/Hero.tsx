@@ -148,8 +148,8 @@ export default function HeroSection() {
     min: isMobile ? 156 : 180,
     max: isMobile ? 206 : 220,
   });
-  const wordsLiftY = isMobile ? -64 : -128
-  const avatarLiftY = wordsLiftY * 1.55;
+  const wordsLiftY = isMobile ? -64 : -98
+  const avatarLiftY = wordsLiftY * 2.05;
   const expandedAvatarY = adaptiveViewportValue(viewport, 'y', isMobile ? -0.24 : -0.48, {
     min: isMobile ? -220 : -460,
     max: isMobile ? -132 : -320,
