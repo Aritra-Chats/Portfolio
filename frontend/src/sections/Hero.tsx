@@ -163,11 +163,11 @@ export default function HeroSection() {
   });
   const pillBottom = isMobile ? '10%' : '10.5%'; // ~1.25x from previous 14%
   const pillBottomRatio = isMobile ? 0.14 : 0.145;
-  const ringShiftX = adaptiveViewportValue(viewport, 'x', -0.0105, {
-    min: -32,
-    max: -8,
+  const ringShiftX = adaptiveViewportValue(viewport, 'x', 0.05, {
+    min: -128,
+    max: 16,
   });
-  const ringShiftY = adaptiveViewportValue(viewport, 'y', -0.106, {
+  const ringShiftY = adaptiveViewportValue(viewport, 'y', -0.098, {
     min: -100,
     max: -68,
   });
