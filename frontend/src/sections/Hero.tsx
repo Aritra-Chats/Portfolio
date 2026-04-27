@@ -140,6 +140,17 @@ export default function HeroSection() {
   const containerRef = useRef<HTMLDivElement>(null);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const viewport = useViewportSize();
+  const minViewportHeight = 720;
+  const maxViewportHeight = 2160;
+
+  const adaptiveYFrom1080 = (valueAt1080: number) => {
+    const ratio = valueAt1080 / 1080;
+    return adaptiveViewportValue(viewport, 'y', ratio, {
+      min: Math.min(ratio * minViewportHeight, ratio * maxViewportHeight),
+      max: Math.max(ratio * minViewportHeight, ratio * maxViewportHeight),
+    });
+  };
+
   const OR = adaptiveViewportValue(viewport, 'x', isMobile ? 0.32 : 0.095, {
     min: isMobile ? 80 : 32,
     max: isMobile ? 106 : 168,
@@ -148,8 +159,8 @@ export default function HeroSection() {
     min: isMobile ? 156 : 180,
     max: isMobile ? 206 : 220,
   });
-  const wordsLiftY = isMobile ? -64 : -98
-  const avatarLiftY = wordsLiftY * 2.05;
+  const wordsLiftY = adaptiveYFrom1080(isMobile ? -64 : -86);
+  const avatarLiftY = adaptiveYFrom1080(wordsLiftY * 2.35);
   const expandedAvatarY = adaptiveViewportValue(viewport, 'y', isMobile ? -0.24 : -0.48, {
     min: isMobile ? -220 : -460,
     max: isMobile ? -132 : -320,
@@ -158,10 +169,11 @@ export default function HeroSection() {
     min: isMobile ? 50 : 70,
     max: isMobile ? 78 : 96,
   });
-  const pillBottom = isMobile ? '16%' : '16.5%'; // ~1.25x from previous 14%
-  const pillBottomRatio = isMobile ? 0.14 : 0.145;
-  const ringShiftX = -1;
-  const ringShiftY = -88;
+  const pillBottomPx = adaptiveYFrom1080(isMobile ? 172.8 : 178.2);
+  const pillBottomRatio = pillBottomPx / viewport.height;
+  const pillBottom = `${pillBottomRatio * 100}%`;
+  const ringShiftX = adaptiveYFrom1080(2);
+  const ringShiftY = adaptiveYFrom1080(-88);
   const scatterCards = useMemo(() => buildScatterCards(isMobile), [isMobile]);
 
   const { scrollYProgress } = useScroll({
@@ -225,7 +237,7 @@ export default function HeroSection() {
     [techShellRevealStart, techShellRevealEnd, techHoldEnd, techCollapseEnd, techResetEnd],
     [0, 1, 1, 0, 0]
   );
-  const techPanelUpshift = isMobile ? -1 : -4;
+  const techPanelUpshift = adaptiveYFrom1080(isMobile ? -1 : -4);
   const techDY = techPanelUpshift;
   const availableTechHeight = viewport.height - viewport.height * pillBottomRatio - (isMobile ? 28 : 40) - techPanelUpshift;
   const maxTechHeight = isMobile ? 520 : 620;
