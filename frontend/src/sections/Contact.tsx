@@ -29,6 +29,7 @@ const EDGES = [
   ['email', 'itchio'],
   ['email', 'leetcode'],
   ['linkedin', 'github'],
+  ['leetcode', 'itchio'],
 ];
 
 function NetworkGraph() {

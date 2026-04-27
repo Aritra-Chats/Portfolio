@@ -140,19 +140,16 @@ export default function HeroSection() {
   const containerRef = useRef<HTMLDivElement>(null);
   const isMobile = useMediaQuery('(max-width: 768px)');
   const viewport = useViewportSize();
-  const OR = adaptiveViewportValue(viewport, 'x', isMobile ? 0.23 : 0.103, {
-    min: isMobile ? 80 : 132,
+  const OR = adaptiveViewportValue(viewport, 'x', isMobile ? 0.32 : 0.095, {
+    min: isMobile ? 80 : 32,
     max: isMobile ? 106 : 168,
   }); // orbit radius
   const initialAvatarSize = adaptiveViewportValue(viewport, 'x', isMobile ? 0.5 : 0.136, {
     min: isMobile ? 156 : 180,
     max: isMobile ? 206 : 220,
   });
-  const wordsLiftY = adaptiveViewportValue(viewport, 'y', isMobile ? -0.055 : -0.08, {
-    min: isMobile ? -58 : -78,
-    max: isMobile ? -34 : -52,
-  });
-  const avatarLiftY = wordsLiftY * 2.5;
+  const wordsLiftY = isMobile ? -64 : -128
+  const avatarLiftY = wordsLiftY * 1.55;
   const expandedAvatarY = adaptiveViewportValue(viewport, 'y', isMobile ? -0.24 : -0.48, {
     min: isMobile ? -220 : -460,
     max: isMobile ? -132 : -320,
@@ -161,16 +158,10 @@ export default function HeroSection() {
     min: isMobile ? 50 : 70,
     max: isMobile ? 78 : 96,
   });
-  const pillBottom = isMobile ? '10%' : '10.5%'; // ~1.25x from previous 14%
+  const pillBottom = isMobile ? '16%' : '16.5%'; // ~1.25x from previous 14%
   const pillBottomRatio = isMobile ? 0.14 : 0.145;
-  const ringShiftX = adaptiveViewportValue(viewport, 'x', -0.01, {
-    min: -512,
-    max: 512,
-  });
-  const ringShiftY = adaptiveViewportValue(viewport, 'y', -0.09, {
-    min: -256,
-    max: 256,
-  });
+  const ringShiftX = -1;
+  const ringShiftY = -88;
   const scatterCards = useMemo(() => buildScatterCards(isMobile), [isMobile]);
 
   const { scrollYProgress } = useScroll({
@@ -181,11 +172,10 @@ export default function HeroSection() {
 
   // ── scroll phases (980 vh) ─────────────────────────────────
   // 0.00 – 0.14  initial hero
-  // 0.14 – 0.46  avatar expands into portrait, about cards appear
-  // 0.44 – 0.62  hold expanded
-  // 0.62 – 0.80  avatar collapses + about fades (SIMULTANEOUS)
-  // 0.80 – 0.86  role pill fully visible again
-  // 0.86 – 1.00  pill expands into tech stack panel
+  // 0.14 – 0.39  avatar expand/hold/collapse
+  // 0.39 – 0.42  role pill fully visible again
+  // 0.42 – 0.96  tech stack expand/hold/collapse
+  // 0.96 – 1.00  initial hero restored and handed to projects
 
   const expandedW = isMobile
     ? Math.min(viewport.width * 0.78, 360)
@@ -193,37 +183,48 @@ export default function HeroSection() {
   const expandedH = Math.min(viewport.height * 0.98, isMobile ? 760 : 940);
 
   // Avatar morphs from circle to portrait without non-uniform scaling.
-  const avW = useTransform(s, [0, 0.22, 0.62, 0.8, 1], [initialAvatarSize, expandedW, expandedW, initialAvatarSize, initialAvatarSize]);
-  const avH = useTransform(s, [0, 0.22, 0.62, 0.8, 1], [initialAvatarSize, expandedH, expandedH, initialAvatarSize, initialAvatarSize]);
+  const avW = useTransform(s, [0, 0.18, 0.32, 0.39, 0.64], [initialAvatarSize, expandedW, expandedW, initialAvatarSize, initialAvatarSize]);
+  const avH = useTransform(s, [0, 0.18, 0.32, 0.39, 0.64], [initialAvatarSize, expandedH, expandedH, initialAvatarSize, initialAvatarSize]);
   const avY = useTransform(
     s,
-    [0, 0.22, 0.62, 0.8, 1],
+    [0, 0.18, 0.32, 0.39, 0.64],
     [avatarLiftY, expandedAvatarY, expandedAvatarY, avatarLiftY, avatarLiftY]
   );
-  const avBR = useTransform(s, [0, 0.18, 0.62, 0.8], [9999, 28, 28, 9999]);
+  const avBR = useTransform(s, [0, 0.15, 0.32, 0.39], [9999, 28, 28, 9999]);
 
-  // avatar ring border fades when expanding
-  const ringOpacity = useTransform(s, [0.1, 0.2], [1, 0]);
+  // avatar ring border fades on first expansion, then returns on collapse and final reset.
+  const ringOpacity = useTransform(s, [0.1, 0.18, 0.32, 0.39, 0.9, 0.96], [1, 0, 0, 1, 1, 1]);
 
-  // orbit returns after avatar recollapse, then fades out again during tech panel pull-up.
-  const orbitOp = useTransform(s, [0, 0.12, 0.22, 0.76, 0.83, 0.9, 0.985, 1], [1, 0.8, 0, 0, 1, 1, 0, 0]);
+  // orbit returns after avatar recollapse, fades during tech pull-up, then restores with final reset.
+  const orbitOp = useTransform(s, [0, 0.12, 0.2, 0.36, 0.41, 0.5, 0.9, 0.94, 0.96], [1, 0.8, 0, 0, 1, 1, 0, 0.5, 1]);
 
   // name + scroll hint follow the same return-and-fade choreography as orbit/avatar.
-  const nameOp = useTransform(s, [0, 0.1, 0.21, 0.76, 0.83, 0.9, 0.985, 1], [1, 1, 0, 0, 1, 1, 0, 0]);
+  const nameOp = useTransform(s, [0, 0.1, 0.2, 0.36, 0.41, 0.5, 0.9, 0.94, 0.96], [1, 1, 0, 0, 1, 1, 0, 0.5, 1]);
 
-  // intro pill appears immediately, then disappears before avatar expansion.
-  const introPillOp = useTransform(s, [0, 0.16, 0.23], [1, 1, 0]);
+  // intro pill appears immediately, hides during middle storyboard, then returns at final reset.
+  const introPillOp = useTransform(s, [0, 0.13, 0.2, 0.958, 0.97], [1, 1, 0, 0, 1]);
 
-  // same role pill returns only after avatar has fully collapsed.
-  const returnPillOp = useTransform(s, [0.8, 0.83, 1], [0, 1, 1]);
+  // same role pill returns only after avatar has fully collapsed, then hands back to intro pill.
+  const returnPillOp = useTransform(s, [0.39, 0.415, 0.946, 0.956], [0, 1, 1, 0]);
 
   // about cards appear during expansion, fade during collapse
-  const aboutBgOp = useTransform(s, [0.2, 0.34, 0.62, 0.8], [0, 1, 1, 0]);
-  const aboutBgDY = useTransform(s, [0.2, 0.34], [20, 0]);
-  const aboutSummaryOp = useTransform(s, [0.24, 0.36, 0.62, 0.8], [0, 1, 1, 0]);
+  const aboutBgOp = useTransform(s, [0.16, 0.24, 0.32, 0.39], [0, 1, 1, 0]);
+  const aboutBgDY = useTransform(s, [0.16, 0.24], [20, 0]);
+  const aboutSummaryOp = useTransform(s, [0.19, 0.26, 0.32, 0.39], [0, 1, 1, 0]);
 
   // expansion starts only after role pill is fully visible in post-collapse state.
-  const techShellOp = useTransform(s, [0.86, 0.9], [0, 1]);
+  const techShellRevealStart = 0.42;
+  const techShellRevealEnd = 0.46; // shell is fully visible by this point
+  const techMotionStart = techShellRevealEnd; // pill starts rising only after border shell is visible
+  const techExpandEnd = 0.65;
+  const techHoldEnd = 0.75;
+  const techCollapseEnd = 0.95;
+  const techResetEnd = 0.96;
+  const techShellOp = useTransform(
+    s,
+    [techShellRevealStart, techShellRevealEnd, techHoldEnd, techCollapseEnd, techResetEnd],
+    [0, 1, 1, 0, 0]
+  );
   const techPanelUpshift = isMobile ? -1 : -4;
   const techDY = techPanelUpshift;
   const availableTechHeight = viewport.height - viewport.height * pillBottomRatio - (isMobile ? 28 : 40) - techPanelUpshift;
@@ -231,28 +232,41 @@ export default function HeroSection() {
   const finalTechHeight = Math.max(
     isMobile ? 388 : 488,
     Math.min(availableTechHeight, maxTechHeight) - 20
+  ) + 48;
+  const baseTechWidth = isMobile ? viewport.width * 0.94 : Math.min(viewport.width * 0.9, 1240);
+  const finalTechWidth = Math.min(baseTechWidth + 16, viewport.width - (isMobile ? 8 : 24));
+  // During collapse, panel shrinks while the pill drops back down to baseline.
+  const techShellH = useTransform(
+    s,
+    [techMotionStart, techExpandEnd, techHoldEnd, techCollapseEnd, techResetEnd],
+    [48, finalTechHeight, finalTechHeight, 48, 48]
   );
-  const finalTechWidth = isMobile ? viewport.width * 0.94 : Math.min(viewport.width * 0.9, 1240);
-  const techShellH = useTransform(s, [0.9, 0.985], [48, finalTechHeight]);
-  const techShellBR = useTransform(s, [0.86, 0.96], [18, 24]);
+  const techShellBR = useTransform(s, [techShellRevealStart, 0.56, techResetEnd], [18, 24, 18]);
   const techShellBorder = useTransform(
     s,
-    [0.86, 0.96],
-    ['rgba(240,240,240,0.22)', 'rgba(240,240,240,0.10)']
+    [techShellRevealStart, 0.56, techResetEnd],
+    ['rgba(240,240,240,0.22)', 'rgba(240,240,240,0.10)', 'rgba(240,240,240,0.22)']
   );
-  const techContentOp = 1;
+  const techContentOp = useTransform(s, [techMotionStart, 0.5, techHoldEnd, techCollapseEnd - 0.01], [0, 1, 1, 0]);
   const pillTopInset = isMobile ? 40 : 48;
-  const pillFinalRise = Math.max(0, Math.min(finalTechHeight + techDY - pillTopInset, isMobile ? 430 : 560));
-  const returnPillY = useTransform(s, [0.8, 0.84, 0.9, 0.985, 1], [0, -8, -8, -pillFinalRise, -pillFinalRise]);
+  const pillFinalRise = Math.max(0, Math.min(finalTechHeight + techDY - pillTopInset, isMobile ? 466 : 586));
+  const returnPillY = useTransform(
+    s,
+    [0.39, 0.41, techShellRevealStart, techMotionStart, techExpandEnd, techHoldEnd, techCollapseEnd, techResetEnd],
+    [0, -8, -8, -8, -pillFinalRise, -pillFinalRise, -8, 0]
+  );
   const techContentTopInset = isMobile ? 72 : 84;
-  // Avatar fade-out as rectangle grows (0.9 to 0.985)
-  const avatarFadeOp = useTransform(s, [0.9, 0.985], [1, 0]);
+  // Avatar fades under the panel, then reappears when the panel collapses.
+  const avatarFadeOp = useTransform(s, [techMotionStart, 0.5, techHoldEnd, techCollapseEnd - 0.01, techResetEnd], [1, 0, 0, 0.35, 1]);
 
   const rolePillText =
     'Software Engineer | MERN-Stack Web Developer | Android Developer | Game Developer';
 
   return (
-    <div ref={containerRef} style={{ height: '760vh' }}>
+    <div ref={containerRef} className="relative" style={{ height: '760vh' }}>
+      {/* Anchor targets used by navbar links to jump into specific hero storyboard beats. */}
+      <div id="about" className="absolute left-0 right-0 h-px" style={{ top: '26%', scrollMarginTop: '72px' }} />
+      <div id="skills" className="absolute left-0 right-0 h-px" style={{ top: '62%', scrollMarginTop: '72px' }} />
       <motion.div className="hero-stage-height sticky top-0 w-full overflow-hidden">
 
         {/* solid stage backdrop so later sections don't bleed into this storyboard */}

@@ -247,12 +247,18 @@ export default function ProjectsSection() {
   // Sticky filter bar
   useEffect(() => {
     const onScroll = () => {
-      if (filterBarRef.current) {
-        const rect = filterBarRef.current.getBoundingClientRect();
-        setFilterSticky(rect.top <= 56);
+      if (filterBarRef.current && sectionRef.current) {
+        const filterRect = filterBarRef.current.getBoundingClientRect();
+        const sectionRect = sectionRef.current.getBoundingClientRect();
+        const stickyTop = 56;
+        const hasReachedStickyPoint = filterRect.top <= stickyTop;
+        // Stop sticky mode when leaving the Projects section.
+        const isWithinProjectsSection = sectionRect.bottom > stickyTop + 80;
+        setFilterSticky(hasReachedStickyPoint && isWithinProjectsSection);
       }
     };
     window.addEventListener('scroll', onScroll, { passive: true });
+    onScroll();
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
