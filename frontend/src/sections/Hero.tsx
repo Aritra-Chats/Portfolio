@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, useEffect } from 'react';
-import { motion, useScroll, useTransform, useSpring } from 'framer-motion';
+import { motion, useScroll, useTransform, useSpring, useReducedMotion } from 'framer-motion';
 import { metrics, orbitIcons, personal, skills } from '../data/portfolio';
 import { adaptiveViewportValue, getViewportScale } from '../utils/viewport';
 
@@ -24,11 +24,19 @@ function useViewportSize() {
   }));
 
   useEffect(() => {
+    let rafId = 0;
+    // Debounce via rAF — coalesces burst events (virtual keyboard, orientation)
     const onResize = () => {
-      setSize({ width: window.innerWidth, height: window.innerHeight });
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        setSize({ width: window.innerWidth, height: window.innerHeight });
+      });
     };
     window.addEventListener('resize', onResize, { passive: true });
-    return () => window.removeEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('resize', onResize);
+      cancelAnimationFrame(rafId);
+    };
   }, []);
 
   return size;
@@ -160,15 +168,15 @@ export default function HeroSection() {
   // aspect-ratios from the 16:9 desktop design canvas.
 
   const OR = isMobile
-    ? Math.max(80, Math.min(106, viewport.width * 0.32))
+    ? Math.max(80, Math.min(130, viewport.width * 0.24))
     : 168 * scale; // orbit radius
 
   const initialAvatarSize = isMobile
-    ? Math.max(156, Math.min(206, viewport.width * 0.5))
-    : 220 * scale;
+    ? Math.max(108, Math.min(160, viewport.width * 0.42))
+    : 240 * scale;
 
-  const wordsLiftY      = (isMobile ? -64 : -86) * scale;
-  const avatarLiftY     = wordsLiftY * 2.35;
+  const wordsLiftY      = (isMobile ? -624 : -132) * scale;
+  const avatarLiftY     = isMobile ? wordsLiftY * 0.625 : wordsLiftY * 1.575;
   const expandedAvatarY = isMobile
     ? Math.max(-220, Math.min(-132, viewport.height * -0.24))
     : -460 * scale;
@@ -177,19 +185,21 @@ export default function HeroSection() {
 
   // Pill sits at a fixed proportional distance from the bottom.
   // pillBottomPx × scale / viewport.height gives the same ratio at every zoom.
-  const pillBottomPx    = (isMobile ? 172.8 : 178.2) * scale;
+  const pillBottomPx    = (isMobile ? 356 : 178.2) * scale;
   const pillBottomRatio = pillBottomPx / viewport.height;
   const pillBottom      = `${pillBottomRatio * 100}%`;
 
   const ringShiftX = 2   * scale;
-  const ringShiftY = -88 * scale;
+  const ringShiftY = (isMobile ? -116 : -88) * scale;
   const scatterCards = useMemo(() => buildScatterCards(isMobile, scale), [isMobile, scale]);
 
   const { scrollYProgress } = useScroll({
     target: containerRef,
     offset: ['start start', 'end end'],
   });
-  const s = useSpring(scrollYProgress, { stiffness: 55, damping: 22 });
+  const prefersReducedMotion = useReducedMotion();
+  // Critically-damped spring — avoids overshoot/rubber-band feel on fast scrolls
+  const s = useSpring(scrollYProgress, { stiffness: 100, damping: 30 });
 
   // ── scroll phases (980 vh) ─────────────────────────────────
   // 0.00 – 0.14  initial hero
@@ -204,14 +214,25 @@ export default function HeroSection() {
   const expandedH = Math.min(viewport.height * 0.98, (isMobile ? 760 : 940) * scale);
 
   // Avatar morphs from circle to portrait without non-uniform scaling.
-  const avW = useTransform(s, [0, 0.18, 0.32, 0.39, 0.64], [initialAvatarSize, expandedW, expandedW, initialAvatarSize, initialAvatarSize]);
-  const avH = useTransform(s, [0, 0.18, 0.32, 0.39, 0.64], [initialAvatarSize, expandedH, expandedH, initialAvatarSize, initialAvatarSize]);
+  // On mobile: avatar stays fixed — ripple overlay handles the reveal instead.
+  const avW = useTransform(s, [0, 0.18, 0.32, 0.39, 0.64],
+    isMobile
+      ? [initialAvatarSize, initialAvatarSize, initialAvatarSize, initialAvatarSize, initialAvatarSize]
+      : [initialAvatarSize, expandedW, expandedW, initialAvatarSize, initialAvatarSize]);
+  const avH = useTransform(s, [0, 0.18, 0.32, 0.39, 0.64],
+    isMobile
+      ? [initialAvatarSize, initialAvatarSize, initialAvatarSize, initialAvatarSize, initialAvatarSize]
+      : [initialAvatarSize, expandedH, expandedH, initialAvatarSize, initialAvatarSize]);
   const avY = useTransform(
     s,
     [0, 0.18, 0.32, 0.39, 0.64],
-    [avatarLiftY, expandedAvatarY, expandedAvatarY, avatarLiftY, avatarLiftY]
+    isMobile
+      ? [avatarLiftY, avatarLiftY * 1.5, avatarLiftY * 1.5, avatarLiftY, avatarLiftY]
+      : [avatarLiftY, expandedAvatarY, expandedAvatarY, avatarLiftY, avatarLiftY]
   );
-  const avBR = useTransform(s, [0, 0.15, 0.32, 0.39], [9999, 28, 28, 9999]);
+  // Avatar stays circular on mobile; morphs to rounded rect on desktop
+  const avBR = useTransform(s, [0, 0.15, 0.32, 0.39],
+    isMobile ? [9999, 9999, 9999, 9999] : [9999, 28, 28, 9999]);
 
   // avatar ring border fades on first expansion, then returns on collapse and final reset.
   const ringOpacity = useTransform(s, [0.1, 0.18, 0.32, 0.39, 0.9, 0.96], [1, 0, 0, 1, 1, 1]);
@@ -241,6 +262,7 @@ export default function HeroSection() {
   const techHoldEnd = 0.75;
   const techCollapseEnd = 0.95;
   const techResetEnd = 0.96;
+
   const techShellOp = useTransform(
     s,
     [techShellRevealStart, techShellRevealEnd, techHoldEnd, techCollapseEnd, techResetEnd],
@@ -255,7 +277,15 @@ export default function HeroSection() {
     pillBottomPx -
     (isMobile ? 28 : 40) * scale -
     techPanelUpshift;
-  const maxTechHeight = (isMobile ? 520 : 620) * scale;
+  // pillTopInset: distance from panel's interior top edge to the pill's bottom edge.
+  // Needs a Math.max floor because at small scales (isMobile ? 40 : 48)*scale can drop
+  // to ~25px — less than the pill height when it wraps to 2 lines (~54px on desktop).
+  // Floor of 72 (desktop) / 110 (mobile) ensures the pill is always inside the panel.
+  const pillTopInset = Math.max(isMobile ? 110 : 72, Math.round((isMobile ? 40 : 48) * scale));
+
+  // Step 7/Fix: increased from 620→740 so the panel is tall enough to show all 5 tech categories
+  // without requiring the user to scroll within the panel at mid-size viewports.
+  const maxTechHeight = (isMobile ? 700 : 800) * scale;
   const finalTechHeight =
     Math.max(
       (isMobile ? 388 : 488) * scale,
@@ -269,10 +299,11 @@ export default function HeroSection() {
     viewport.width - (isMobile ? 8 : 24 * scale)
   );
   // During collapse, panel shrinks while the pill drops back down to baseline.
+  // The initial/final height is pillTopInset so the panel correctly wraps the pill's height.
   const techShellH = useTransform(
     s,
     [techMotionStart, techExpandEnd, techHoldEnd, techCollapseEnd, techResetEnd],
-    [48, finalTechHeight, finalTechHeight, 48, 48]
+    [pillTopInset, finalTechHeight, finalTechHeight, pillTopInset, pillTopInset]
   );
   const techShellBR = useTransform(s, [techShellRevealStart, 0.56, techResetEnd], [18, 24, 18]);
   const techShellBorder = useTransform(
@@ -281,16 +312,35 @@ export default function HeroSection() {
     ['rgba(240,240,240,0.22)', 'rgba(240,240,240,0.10)', 'rgba(240,240,240,0.22)']
   );
   const techContentOp = useTransform(s, [techMotionStart, 0.5, techHoldEnd, techCollapseEnd - 0.01], [0, 1, 1, 0]);
-  const pillTopInset = (isMobile ? 40 : 48) * scale;
-  const pillFinalRise = Math.max(0, Math.min(finalTechHeight + techDY - pillTopInset, (isMobile ? 466 : 586) * scale));
+
+  // pillFinalRise: how many px the pill rises from its resting position.
+  // Correct formula: finalTechHeight − techDY − pillTopInset
+  // • techDY is NEGATIVE (panel shifts up), so −techDY is POSITIVE → adds the panel
+  //   upshift so the pill correctly tracks the panel’s interior top edge.
+  // • No external scale-based cap needed — the pillTopInset floor guarantees the
+  //   pill’s top edge stays inside the panel at every viewport size.
+  const pillFinalRise = Math.max(0, Math.round(finalTechHeight - techDY - pillTopInset));
   const returnPillY = useTransform(
     s,
     [0.39, 0.41, techShellRevealStart, techMotionStart, techExpandEnd, techHoldEnd, techCollapseEnd, techResetEnd],
     [0, -8, -8, -8, -pillFinalRise, -pillFinalRise, -8, 0]
   );
-  const techContentTopInset = (isMobile ? 72 : 84) * scale;
+  // 72 = 9×8, 88 = 11×8 — both on the 8pt grid (84 was not)
+  const techContentTopInset = (isMobile ? 72 : 88) * scale;
   // Avatar fades under the panel, then reappears when the panel collapses.
   const avatarFadeOp = useTransform(s, [techMotionStart, 0.5, techHoldEnd, techCollapseEnd - 0.01, techResetEnd], [1, 0, 0, 0.35, 1]);
+
+  // ── Mobile ripple reveal (replaces avatar expansion on mobile) ──────────────
+  // Expands from avatar centre, covering the stage, then collapses back.
+  const mobileRippleRadius = useTransform(
+    s,
+    [0.14, 0.24, 0.32, 0.39],
+    ['0%', '150%', '150%', '0%']
+  );
+  const mobileRippleClipPath = useTransform(
+    mobileRippleRadius,
+    (r: string) => `circle(${r} at 50% 50%)`
+  );
 
   const rolePillText =
     'Software Engineer | MERN-Stack Web Developer | Android Developer | Game Developer';
@@ -334,8 +384,8 @@ export default function HeroSection() {
                   <div
                     className="rounded-full flex items-center justify-center shadow-lg"
                     style={{
-                      width:  Math.round((isMobile ? 36 : 44) * scale),
-                      height: Math.round((isMobile ? 36 : 44) * scale),
+                      width:  Math.round((isMobile ? 77 : 44) * scale),
+                      height: Math.round((isMobile ? 77 : 44) * scale),
                       background: 'rgba(18,18,18,0.92)',
                       border: '1px solid rgba(240,240,240,0.12)',
                     }}
@@ -345,8 +395,8 @@ export default function HeroSection() {
                       src={icon.icon}
                       alt={icon.name}
                       style={{
-                        width:  Math.round((isMobile ? 20 : 24) * scale),
-                        height: Math.round((isMobile ? 20 : 24) * scale),
+                        width:  Math.round((isMobile ? 52 : 24) * scale),
+                        height: Math.round((isMobile ? 52 : 24) * scale),
                       }}
                       loading="lazy"
                     />
@@ -356,6 +406,87 @@ export default function HeroSection() {
             })}
           </div>
         </motion.div>
+
+        {/* ══ MOBILE RIPPLE REVEAL (replaces avatar expansion on mobile) ══ */}
+        {isMobile && (
+          <motion.div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              zIndex: 4,
+              background: 'rgba(10,10,10,0.93)',
+              backdropFilter: 'blur(14px)',
+              clipPath: mobileRippleClipPath,
+            }}
+          >
+            <motion.div className="absolute inset-0">
+              {/* About background scatter cards inside the ripple */}
+              {scatterCards.map((card, i) => (
+                <motion.div
+                  key={`ripple-${card.id}`}
+                  className="absolute pointer-events-none"
+                  style={{
+                    left: `${card.left}%`,
+                    top: `${card.top}%`,
+                    x: '-50%',
+                    y: '-50%',
+                    rotate: card.rot,
+                    zIndex: 1,
+                  }}
+                >
+                  <div
+                    className="rounded-xl"
+                    style={{
+                      padding: Math.max(12, Math.round(14 * scale)),
+                      background: 'rgba(12,12,12,0.7)',
+                      border: '1px solid rgba(240,240,240,0.1)',
+                      backdropFilter: 'blur(14px)',
+                      minWidth: card.w,
+                      width: 'max-content',
+                    }}
+                  >
+                  <p className="font-mono tracking-[0.2em] text-ash-500 uppercase" style={{ fontSize: Math.max(11, Math.round(11 * scale)), marginBottom: Math.round(4 * scale) }}>
+                    {card.title}
+                  </p>
+                  <p className="font-mono text-ash-300 leading-snug" style={{ fontSize: Math.max(13, Math.round(13 * scale)) }}>{card.value}</p>
+                </div>
+              </motion.div>
+            ))}
+
+            {/* About summary card at bottom of ripple */}
+            <div
+              className="absolute left-1/2 pointer-events-none"
+              style={{
+                bottom: '10%',
+                x: '-50%',
+                transform: 'translateX(-50%)',
+                zIndex: 2,
+                width: '92vw',
+              }}
+            >
+              <div
+                className="rounded-2xl"
+                style={{
+                  padding: Math.max(16, Math.round(18 * scale)),
+                  background: 'rgba(10,10,10,0.86)',
+                  border: '1px solid rgba(240,240,240,0.15)',
+                  backdropFilter: 'blur(18px)',
+                }}
+              >
+                <p className="font-mono tracking-[0.2em] uppercase text-ash-500 text-center" style={{ fontSize: Math.max(11, Math.round(11 * scale)), marginBottom: Math.round(8 * scale) }}>About</p>
+                <p className="font-body text-ash-200 leading-relaxed text-center" style={{ fontSize: Math.max(14, Math.round(14 * scale)) }}>
+                  I build production-ready systems across web, Android, and real-time game networking with a strong backend foundation.
+                </p>
+                <p className="font-body text-ash-300 leading-relaxed text-center" style={{ fontSize: Math.max(14, Math.round(14 * scale)), marginTop: Math.round(8 * scale) }}>
+                  At KIIT CSE (CGPA 9.2), I am building Kampus Life with 30+ APIs, JWT + RBAC security, and offline-first Android workflows.
+                </p>
+                <p className="font-body text-ash-300 leading-relaxed text-center" style={{ fontSize: Math.max(14, Math.round(14 * scale)), marginTop: Math.round(8 * scale) }}>
+                  I also design multiplayer and local-AI systems with ownership from architecture to deployment.
+                </p>
+              </div>
+            </div>
+            </motion.div>
+          </motion.div>
+        )}
 
         {/* ══ AVATAR (Framer Motion – no CSS animation conflict) ══ */}
         <motion.div
@@ -405,7 +536,7 @@ export default function HeroSection() {
           <motion.h1
             className="font-display tracking-widest text-ash-100 text-center px-4"
             style={{
-              fontSize: Math.round((isMobile ? 48 : 96) * scale),
+              fontSize: Math.max(isMobile ? 36 : 48, Math.round((isMobile ? 52 : 96) * scale)),
               marginBottom: Math.round(24 * scale),
             }}
             initial={{ opacity: 0, y: 22 }}
@@ -422,10 +553,11 @@ export default function HeroSection() {
             transition={{ delay: 1.3, duration: 0.6 }}
             style={{ y: scrollHintShiftY, bottom: Math.round(32 * scale), gap: Math.round(8 * scale) }}
           >
-            <span className="font-mono tracking-[0.35em] text-ash-500 uppercase" style={{ fontSize: Math.round(10 * scale) }}>Scroll</span>
+            <span aria-hidden="true" className="font-mono tracking-[0.35em] text-ash-500 uppercase" style={{ fontSize: Math.max(12, Math.round(10 * scale)) }}>Scroll</span>
             <motion.div
+              aria-hidden="true"
               style={{ width: 1, height: Math.round(32 * scale), background: 'linear-gradient(to bottom, #666, transparent)' }}
-              animate={{ scaleY: [1, 0.3, 1] }}
+              animate={prefersReducedMotion ? {} : { scaleY: [1, 0.3, 1] }}
               transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
             />
           </motion.div>
@@ -439,8 +571,8 @@ export default function HeroSection() {
           <div
             className="font-mono rounded-full tracking-wider"
             style={{
-              padding: `${Math.round(10 * scale)}px ${Math.round(24 * scale)}px`,
-              fontSize: Math.round((isMobile ? 12 : 14) * scale),
+              padding: `${Math.max(10, Math.round(10 * scale))}px ${Math.round(24 * scale)}px`,
+              fontSize: Math.max(14, Math.round((isMobile ? 14 : 14) * scale)),
               background: 'rgba(16,16,16,0.82)',
               border: '1px solid rgba(240,240,240,0.18)',
               backdropFilter: 'blur(14px)',
@@ -463,7 +595,7 @@ export default function HeroSection() {
               x: '-50%',
               y: aboutBgDY,
               rotate: card.rot,
-              opacity: aboutBgOp,
+              opacity: isMobile ? 0 : aboutBgOp,
               zIndex: 3,
               width: card.w,
             }}
@@ -478,21 +610,21 @@ export default function HeroSection() {
                 backdropFilter: 'blur(14px)',
               }}
             >
-              <p className="font-mono tracking-[0.2em] text-ash-500 uppercase" style={{ fontSize: Math.round(9 * scale), marginBottom: Math.round(4 * scale) }}>
+              <p className="font-mono tracking-[0.2em] text-ash-500 uppercase" style={{ fontSize: Math.max(11, Math.round(11 * scale)), marginBottom: Math.round(4 * scale) }}>
                 {card.title}
               </p>
-              <p className="font-mono text-ash-300 leading-snug" style={{ fontSize: Math.round(11 * scale) }}>{card.value}</p>
+              <p className="font-mono text-ash-300 leading-snug" style={{ fontSize: Math.max(13, Math.round(13 * scale)) }}>{card.value}</p>
             </div>
           </motion.div>
         ))}
 
-        {/* Summary foreground during avatar expansion */}
+        {/* Summary foreground during avatar expansion — desktop only */}
         <motion.div
           className="absolute left-1/2 pointer-events-none"
           style={{
             bottom: isMobile ? '12%' : '10%',
             x: '-50%',
-            opacity: aboutSummaryOp,
+            opacity: isMobile ? 0 : aboutSummaryOp,
             zIndex: 7,
             width: isMobile ? '92vw' : 'min(92vw, 980px)',
           }}
@@ -506,14 +638,14 @@ export default function HeroSection() {
               backdropFilter: 'blur(18px)',
             }}
           >
-            <p className="font-mono tracking-[0.2em] uppercase text-ash-500 text-center" style={{ fontSize: Math.round(10 * scale), marginBottom: Math.round(8 * scale) }}>About</p>
-            <p className="font-body text-ash-200 leading-relaxed text-center" style={{ fontSize: Math.round((isMobile ? 12 : 14) * scale) }}>
+            <p className="font-mono tracking-[0.2em] uppercase text-ash-500 text-center" style={{ fontSize: Math.max(11, Math.round(10 * scale)), marginBottom: Math.round(8 * scale) }}>About</p>
+            <p className="font-body text-ash-200 leading-relaxed text-center" style={{ fontSize: Math.max(14, Math.round((isMobile ? 14 : 14) * scale)) }}>
               I build production-ready systems across web, Android, and real-time game networking with a strong backend foundation.
             </p>
-            <p className="font-body text-ash-300 leading-relaxed text-center" style={{ fontSize: Math.round((isMobile ? 12 : 14) * scale), marginTop: Math.round(8 * scale) }}>
-              At KIIT CSE (CGPA 9.15), I am building Kampus Life with 30+ APIs, JWT + RBAC security, and offline-first Android workflows.
+            <p className="font-body text-ash-300 leading-relaxed text-center" style={{ fontSize: Math.max(14, Math.round((isMobile ? 14 : 14) * scale)), marginTop: Math.round(8 * scale) }}>
+              At KIIT CSE (CGPA 9.2), I am building Kampus Life with 30+ APIs, JWT + RBAC security, and offline-first Android workflows.
             </p>
-            <p className="font-body text-ash-300 leading-relaxed text-center" style={{ fontSize: Math.round((isMobile ? 12 : 14) * scale), marginTop: Math.round(8 * scale) }}>
+            <p className="font-body text-ash-300 leading-relaxed text-center" style={{ fontSize: Math.max(14, Math.round((isMobile ? 14 : 14) * scale)), marginTop: Math.round(8 * scale) }}>
               I also design multiplayer and local-AI systems with ownership from architecture to deployment.
             </p>
           </div>
@@ -527,8 +659,8 @@ export default function HeroSection() {
           <div
             className="font-mono rounded-full tracking-wider"
             style={{
-              padding: `${Math.round(10 * scale)}px ${Math.round(24 * scale)}px`,
-              fontSize: Math.round((isMobile ? 12 : 14) * scale),
+              padding: `${Math.max(10, Math.round(10 * scale))}px ${Math.round(24 * scale)}px`,
+              fontSize: Math.max(14, Math.round((isMobile ? 14 : 14) * scale)),
               background: 'rgba(16,16,16,0.88)',
               border: '1px solid rgba(240,240,240,0.2)',
               backdropFilter: 'blur(14px)',
@@ -574,12 +706,32 @@ export default function HeroSection() {
             >
               <motion.h2
                 className="font-display tracking-wider text-ash-100"
-                style={{ fontSize: Math.round((isMobile ? 48 : 72) * scale), marginBottom: Math.round(32 * scale), opacity: techContentOp }}
+                style={{
+                  // Floor 36 (desktop) / 30 (mobile) — was 48 desktop. Saves ~12px at
+                  // mid-scale viewports so the categories scrollable area gets more height.
+                  fontSize: Math.max(isMobile ? 30 : 36, Math.round((isMobile ? 56 : 72) * scale)),
+                  marginBottom: Math.max(isMobile ? 12 : 16, Math.round(32 * scale)),
+                  opacity: techContentOp,
+                }}
               >
                 TECH STACK
               </motion.h2>
 
-                <motion.div style={{ opacity: techContentOp, flex: 1, minHeight: 0, overflowY: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none', display: 'flex', flexDirection: 'column', gap: Math.round(20 * scale), paddingRight: Math.round(4 * scale) }}>
+                <motion.div style={{
+                  opacity: techContentOp,
+                  flex: 1,
+                  minHeight: 0,
+                  overflowY: 'auto',
+                  pointerEvents: 'auto',
+                  scrollbarWidth: 'none',
+                  msOverflowStyle: 'none',
+                  display: 'grid',
+                  gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                  columnGap: Math.round(24 * scale),
+                  rowGap: Math.round((isMobile ? 16 : 24) * scale),
+                  alignItems: 'start',
+                  paddingRight: Math.round(4 * scale)
+                }}>
                 {TECH_CATEGORIES.map((tc, ci) => (
                   <motion.div
                     key={tc.cat}
@@ -587,19 +739,19 @@ export default function HeroSection() {
                     transition={{ delay: ci * 0.08 }}
                   >
                     <div className="flex items-center" style={{ gap: Math.round(12 * scale), marginBottom: Math.round(8 * scale) }}>
-                      <span className="font-mono tracking-[0.25em] text-ash-500 uppercase" style={{ fontSize: Math.round(10 * scale) }}>
+                      <span className="font-mono tracking-[0.25em] text-ash-500 uppercase" style={{ fontSize: Math.max(11, Math.round(11 * scale)) }}>
                         {tc.cat}
                       </span>
                       <div className="h-px flex-1" style={{ background: 'rgba(240,240,240,0.06)' }} />
                     </div>
-                    <div className="flex flex-wrap" style={{ gap: Math.round(6 * scale) }}>
+                    <div className="flex flex-wrap" style={{ gap: Math.round((isMobile ? 4 : 6) * scale) }}>
                       {tc.items.map((item) => (
                         <span
                           key={item}
                           className="font-mono text-ash-300 rounded-lg"
                           style={{
-                            fontSize: Math.round(11 * scale),
-                            padding: `${Math.round(6 * scale)}px ${Math.round(12 * scale)}px`,
+                            fontSize: Math.max(12, Math.round((isMobile ? 12 : 11) * scale)),
+                            padding: `${Math.max(isMobile ? 4 : 6, Math.round((isMobile ? 4 : 6) * scale))}px ${Math.max(isMobile ? 8 : 12, Math.round((isMobile ? 8 : 12) * scale))}px`,
                             background: 'rgba(255,255,255,0.04)',
                             border: '1px solid rgba(240,240,240,0.09)',
                           }}
@@ -612,7 +764,7 @@ export default function HeroSection() {
                 ))}
               </motion.div>
 
-              <motion.p className="font-mono tracking-widest text-ash-600 uppercase text-center animate-bounce" style={{ fontSize: Math.round(10 * scale), marginTop: Math.round(28 * scale), opacity: techContentOp }}>
+              <motion.p aria-hidden="true" className="font-mono tracking-widest text-ash-600 uppercase text-center animate-bounce" style={{ fontSize: Math.round(10 * scale), marginTop: Math.round(28 * scale), opacity: techContentOp }}>
                 Keep scrolling →
               </motion.p>
             </motion.div>

@@ -19,27 +19,32 @@ const CATEGORY_ACCENT: Record<string, string> = {
   'AI / LLM':  'rgba(240,240,240,0.18)',
 };
 
-function SkillBadge({
-  name,
-  level,
-  index,
-}: {
-  name: string;
-  level?: string;
-  index: number;
-}) {
-  const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
+// Step 7: badge variants — driven by parent container when swimlane enters view.
+// Removes N IntersectionObserver instances (was one per badge = 35+).
+const badgeContainerVariants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.025,     // Step 4: clamp stagger — max ~0.9s for 35 badges vs old 1.4s
+      delayChildren: 0.05,
+    },
+  },
+};
 
+const badgeItemVariants = {
+  hidden:  { opacity: 0, scale: 0.85 },
+  visible: { opacity: 1, scale: 1, transition: { duration: 0.3, ease: [0.22, 1, 0.36, 1] } },
+};
+
+// Step 6: focus-visible ring via Tailwind class so keyboard users see focus state
+function SkillBadge({ name, level }: { name: string; level?: string }) {
   return (
     <motion.div
-      ref={ref}
-      initial={{ opacity: 0, scale: 0.85 }}
-      animate={inView ? { opacity: 1, scale: 1 } : {}}
-      transition={{ delay: index * 0.04, duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-      className="group relative"
+      variants={badgeItemVariants}
+      className="group relative focus-visible:outline-none"
     >
       <div
-        className="px-3.5 py-2 rounded-lg font-mono text-xs tracking-wide cursor-default transition-all duration-200"
+        className="px-3.5 py-2 rounded-lg font-mono text-xs tracking-wide cursor-default transition-all duration-200 focus-visible:ring-2 focus-visible:ring-white/30"
         style={{
           background: 'rgba(255,255,255,0.03)',
           border: '1px solid rgba(240,240,240,0.09)',
@@ -61,6 +66,7 @@ function SkillBadge({
           <span
             className="ml-2 inline-block w-1 h-1 rounded-full align-middle"
             style={{ background: '#f0f0f0', opacity: 0.6 }}
+            aria-hidden="true"
           />
         )}
       </div>
@@ -77,6 +83,7 @@ function CategorySwimlane({
   items: { name: string; level?: string }[];
   index: number;
 }) {
+  // Step 7: ONE IO per swimlane (not one per badge)
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.15 });
 
   return (
@@ -108,12 +115,17 @@ function CategorySwimlane({
         </span>
       </div>
 
-      {/* Badges */}
-      <div className="flex flex-wrap gap-2">
-        {items.map((skill, i) => (
-          <SkillBadge key={skill.name} name={skill.name} level={skill.level} index={i} />
+      {/* Badges — animated as a staggered group, no per-badge IO */}
+      <motion.div
+        className="flex flex-wrap gap-2"
+        variants={badgeContainerVariants}
+        initial="hidden"
+        animate={inView ? 'visible' : 'hidden'}
+      >
+        {items.map((skill) => (
+          <SkillBadge key={skill.name} name={skill.name} level={skill.level} />
         ))}
-      </div>
+      </motion.div>
     </motion.div>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import {
@@ -9,6 +9,19 @@ import {
   featuredRepos,
   contact,
 } from '../data/portfolio';
+
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(
+    typeof window !== 'undefined' ? window.matchMedia(query).matches : false
+  );
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const h = (e: MediaQueryListEvent) => setMatches(e.matches);
+    mq.addEventListener('change', h);
+    return () => mq.removeEventListener('change', h);
+  }, [query]);
+  return matches;
+}
 
 type DossierPanel = 'experience' | 'education' | 'certifications' | 'github';
 
@@ -42,6 +55,8 @@ function ExperiencePanel() {
           <button
             className="w-full text-left px-5 py-4 flex items-start justify-between gap-4"
             onClick={() => setExpanded(expanded === i ? null : i)}
+            aria-expanded={expanded === i}
+            aria-controls={`exp-body-${i}`}
           >
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
@@ -55,7 +70,7 @@ function ExperiencePanel() {
                 )}
                 <span className="font-mono text-[10px] text-ash-500 tracking-wider">{exp.type}</span>
               </div>
-              <h4 className="font-heading font-semibold text-base text-ash-100">{exp.role}</h4>
+              <h4 className="font-heading font-semibold text-lg md:text-base text-ash-100">{exp.role}</h4>
               <p className="font-mono text-xs text-ash-400 mt-0.5">{exp.org}</p>
             </div>
             <div className="text-right shrink-0">
@@ -75,6 +90,7 @@ function ExperiencePanel() {
           <AnimatePresence>
             {expanded === i && (
               <motion.div
+                id={`exp-body-${i}`}
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
@@ -92,7 +108,7 @@ function ExperiencePanel() {
                   )}
                   <ul className="space-y-2 mb-4">
                     {exp.highlights.map((h, j) => (
-                      <li key={j} className="flex gap-2 font-body text-sm text-ash-300 leading-relaxed">
+                      <li key={j} className="flex gap-2 font-body text-base md:text-sm text-ash-300 leading-relaxed">
                         <span className="text-ash-600 mt-0.5 shrink-0">—</span>
                         {h}
                       </li>
@@ -141,6 +157,8 @@ function EducationPanel() {
           <button
             className="w-full text-left px-5 py-4 flex items-start justify-between gap-4"
             onClick={() => setExpanded(expanded === i ? null : i)}
+            aria-expanded={expanded === i}
+            aria-controls={`edu-body-${i}`}
           >
             <div className="flex-1">
               {i === 0 && (
@@ -170,6 +188,7 @@ function EducationPanel() {
           <AnimatePresence>
             {expanded === i && (
               <motion.div
+                id={`edu-body-${i}`}
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
                 exit={{ height: 0, opacity: 0 }}
@@ -387,7 +406,20 @@ function GithubPanel() {
 // ── Main Section ──────────────────────────────────────────────────────────────
 export default function CareerSection() {
   const [activePanel, setActivePanel] = useState<DossierPanel>('experience');
-  const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
+  const [showMobileDossierBar, setShowMobileDossierBar] = useState(false);
+  const isMobile = useMediaQuery('(max-width: 768px)');
+  const sectionDomRef = useRef<HTMLElement | null>(null);
+  const { ref: inViewRef, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
+
+  // Mobile: show/hide dossier top bar based on section visibility
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => setShowMobileDossierBar(entry.isIntersecting),
+      { threshold: 0.05 }
+    );
+    if (sectionDomRef.current) observer.observe(sectionDomRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   const panelComponents: Record<DossierPanel, React.ReactNode> = {
     experience:     <ExperiencePanel />,
@@ -397,14 +429,70 @@ export default function CareerSection() {
   };
 
   return (
-    <section id="career" ref={ref} className="relative py-24 md:py-32 px-6 md:px-16 lg:px-24">
+    <section
+      id="career"
+      ref={(el) => {
+        inViewRef(el);
+        sectionDomRef.current = el;
+      }}
+      className="relative py-24 md:py-32 px-6 md:px-10 lg:px-16 pt-28 md:pt-32"
+    >
       {/* Top separator */}
       <div
-        className="absolute top-0 left-24 right-24 h-px"
+        className="absolute top-0 left-16 right-16 h-px"
         style={{ background: 'linear-gradient(to right, transparent, rgba(240,240,240,0.08), transparent)' }}
       />
 
-      <div className="max-w-6xl mx-auto">
+      {/* ── Mobile-only sticky dossier tab bar ── */}
+      <AnimatePresence>
+        {showMobileDossierBar && isMobile && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+            className="fixed left-0 right-0 z-40 flex md:hidden"
+            role="tablist"
+            aria-label="Career dossier sections"
+            style={{
+              top: 'clamp(44px, 3.5vw, 64px)',
+              background: 'rgba(10,10,10,0.92)',
+              backdropFilter: 'blur(16px)',
+              borderBottom: '1px solid rgba(240,240,240,0.08)',
+            }}
+          >
+            {PANELS.map((panel) => (
+              <button
+                key={panel.id}
+                onClick={() => setActivePanel(panel.id)}
+                role="tab"
+                aria-selected={activePanel === panel.id}
+                aria-controls={`dossier-panel-${panel.id}`}
+                className="flex-1 flex flex-col items-center gap-0.5 py-2.5 transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/30"
+                style={{
+                  background: activePanel === panel.id ? 'rgba(240,240,240,0.07)' : 'transparent',
+                  borderBottom: `2px solid ${activePanel === panel.id ? 'rgba(240,240,240,0.5)' : 'transparent'}`,
+                }}
+              >
+                <span
+                  className="font-mono text-base"
+                  style={{ color: activePanel === panel.id ? '#f5f5f5' : '#666' }}
+                >
+                  {panel.icon}
+                </span>
+                <span
+                  className="font-mono text-[11px] tracking-wider uppercase"
+                  style={{ color: activePanel === panel.id ? '#f5f5f5' : '#666' }}
+                >
+                  {panel.label}
+                </span>
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="w-full">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -426,12 +514,12 @@ export default function CareerSection() {
 
         {/* Dossier split-screen */}
         <div className="flex flex-col md:flex-row gap-6 md:gap-10">
-          {/* Left nav panel */}
+          {/* Left nav panel — hidden on mobile (replaced by sticky top bar) */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={inView ? { opacity: 1, x: 0 } : {}}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="md:w-48 shrink-0"
+            className="hidden md:block md:w-48 shrink-0"
           >
             <div
               className="md:sticky md:top-20 rounded-2xl overflow-hidden"
@@ -441,7 +529,10 @@ export default function CareerSection() {
                 <button
                   key={panel.id}
                   onClick={() => setActivePanel(panel.id)}
-                  className="w-full flex items-center gap-3 px-5 py-4 text-left transition-all"
+                  role="tab"
+                  aria-selected={activePanel === panel.id}
+                  aria-controls={`dossier-panel-${panel.id}`}
+                  className="w-full flex items-center gap-3 px-5 py-4 text-left transition-all focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/30"
                   style={{
                     background: activePanel === panel.id ? 'rgba(240,240,240,0.06)' : 'transparent',
                     borderBottom: i < PANELS.length - 1 ? '1px solid rgba(240,240,240,0.05)' : 'none',
@@ -450,13 +541,13 @@ export default function CareerSection() {
                 >
                   <span
                     className="font-mono text-base"
-                    style={{ color: activePanel === panel.id ? '#f0f0f0' : '#444' }}
+                    style={{ color: activePanel === panel.id ? '#f5f5f5' : '#666' }}
                   >
                     {panel.icon}
                   </span>
                   <span
                     className="font-mono text-xs tracking-wider uppercase"
-                    style={{ color: activePanel === panel.id ? '#f0f0f0' : '#555' }}
+                    style={{ color: activePanel === panel.id ? '#f5f5f5' : '#666' }}
                   >
                     {panel.label}
                   </span>
@@ -475,6 +566,9 @@ export default function CareerSection() {
             <AnimatePresence mode="wait">
               <motion.div
                 key={activePanel}
+                id={`dossier-panel-${activePanel}`}
+                role="tabpanel"
+                aria-label={PANELS.find(p => p.id === activePanel)?.label}
                 initial={{ opacity: 0, x: 16 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -16 }}

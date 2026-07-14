@@ -37,7 +37,7 @@ html {
    *
    * clamp() keeps text legible on very narrow viewports and very wide ones.
    */
-  font-size: clamp(10px, calc(100vw / 120), 20px);
+  font-size: clamp(14px, calc(100vw / 68), 18px);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -165,15 +165,47 @@ body::before {
   100% { stroke-dashoffset: -100; opacity: 0.2; }
 }
 
+/* ─── Status badge active dot pulse ─── */
+/* Referenced by `.pulse-dot` on the active project status badge in Projects.tsx.
+   The old code used inline `animation: 'pulse 2s infinite'` which silently
+   failed — no `pulse` keyframe existed in the browser's or Tailwind's CSS. */
+@keyframes pulseDot {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.4); }
+}
+
+.pulse-dot {
+  animation: pulseDot 2s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
 /* ─── Prefers Reduced Motion ─── */
 @media (prefers-reduced-motion: reduce) {
   .orbit-ring,
   .orbit-icon-inner,
   .avatar-glow,
+  .pulse-dot,
   * {
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* ─── Global focus-visible ring ───────────────────────────────────────────
+   Provides a visible keyboard-focus indicator for ALL interactive elements
+   that don't already have a custom focus style. Uses :focus-visible so mouse
+   clicks (which set :focus but not :focus-visible) are unaffected.
+   Individual components can override with their own focus-visible styles.
+────────────────────────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid rgba(240, 240, 240, 0.35);
+  outline-offset: 3px;
+}
+
+/* Suppress the global rule for elements that manage their own focus styles
+   via Tailwind `focus-visible:` utilities — avoids double-ring. */
+[class*='focus-visible:outline']:focus-visible {
+  outline: none;
 }
 
 /* ─── Section label ─── */
@@ -195,6 +227,16 @@ body::before {
 .card-base:hover {
   border-color: var(--border-bright);
   box-shadow: var(--glow-sm);
+}
+
+/* ─── Project card hover + focus-within ring ────────────────────────────
+   When a keyboard user focuses a link inside the card, the whole card
+   lights up identically to a mouse hover — no JS required.
+────────────────────────────────────────────────────────────────────────── */
+.project-card:hover,
+.project-card:focus-within {
+  border-color: rgba(240, 240, 240, 0.2) !important;
+  box-shadow: 0 0 40px rgba(240, 240, 240, 0.05);
 }
 
 /* ─── Iris reveal overlay ─── */
@@ -221,6 +263,12 @@ body::before {
 @media (max-width: 768px) {
   :root {
     --orbit-radius: clamp(80px, 25vw, 106px);
+  }
+}
+
+@media (min-width: 769px) {
+  html {
+    font-size: clamp(14px, calc(100vw / 120), 20px);
   }
 }
 

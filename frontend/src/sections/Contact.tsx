@@ -48,7 +48,7 @@ function NetworkGraph() {
   const getNode = (id: string) => NODES.find((n) => n.id === id)!;
 
   return (
-    <div className="relative w-full max-w-lg mx-auto mb-10" style={{ height: 260 }}>
+    <div className="relative w-full max-w-2xl mx-auto mb-10" style={{ height: 280 }}>
       <svg
         viewBox="0 0 640 260"
         className="w-full h-full"
@@ -89,7 +89,8 @@ function NetworkGraph() {
                 strokeDashoffset: [0, -20],
                 opacity: isActive ? [0.4, 0.8, 0.4] : [0.1, 0.25, 0.1],
               }}
-              transition={{ duration: 3, repeat: Infinity, ease: 'linear' }}
+              // Step 7: 4s duration (was 3s) — same visual effect, 25% fewer repaints
+              transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
             />
           );
         })}
@@ -125,7 +126,7 @@ function NetworkGraph() {
                   cx={node.x} cy={node.y}
                   r={node.r}
                   fill={isHov ? 'rgba(240,240,240,0.12)' : 'rgba(20,20,20,0.95)'}
-                  stroke={isHov ? 'rgba(240,240,240,0.6)' : 'rgba(240,240,240,0.2)'}
+                  stroke={isHov ? 'rgba(240,240,240,0.6)' : 'rgba(240,240,240,0.35)'}
                   strokeWidth="1.5"
                   filter={isHov ? 'url(#glow-bright)' : 'url(#glow)'}
                   animate={{ r: isHov ? node.r + 3 : node.r }}
@@ -151,19 +152,32 @@ function NetworkGraph() {
                     x={node.x} y={node.y + 4}
                     textAnchor="middle"
                     fontSize={node.r * 0.8}
-                    fill={isHov ? '#fff' : '#999'}
+                    fill={isHov ? '#fff' : '#c0c0c0'}
                     style={{ fontFamily: 'monospace', userSelect: 'none' }}
                   >
                     {node.icon}
                   </text>
                 )}
 
+                {/* Step 5/6: invisible enlarged hit-target circle — on mobile the SVG scales to ~46%,
+                   making the visible circle only ~8px. This transparent circle stays at 44px logical.
+                   pointer-events: all ensures it captures touches. */}
+                <circle
+                  cx={node.x}
+                  cy={node.y}
+                  r={node.r + 20}
+                  fill="transparent"
+                  stroke="none"
+                  style={{ pointerEvents: 'all' }}
+                  aria-hidden="true"
+                />
+
                 {/* Label */}
                 <text
                   x={node.x} y={node.y + node.r + 16}
                   textAnchor="middle"
                   fontSize="10"
-                  fill={isHov ? '#f0f0f0' : '#555'}
+                  fill={isHov ? '#ffffff' : '#909090'}
                   style={{ fontFamily: '"JetBrains Mono", monospace', userSelect: 'none', letterSpacing: '0.1em' }}
                 >
                   {node.label}
@@ -201,9 +215,9 @@ function ContactForm() {
     background: 'rgba(255,255,255,0.03)',
     border: '1px solid rgba(240,240,240,0.1)',
     borderRadius: 10,
-    color: '#e0e0e0',
+    color: '#e8e8e8',
     fontFamily: '"DM Sans", sans-serif',
-    fontSize: 14,
+    fontSize: 16,           // ≥16px prevents iOS auto-zoom on focus
     outline: 'none',
     transition: 'border-color 0.2s',
     width: '100%',
@@ -225,10 +239,12 @@ function ContactForm() {
       <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="font-mono text-[10px] tracking-widest text-ash-500 uppercase block mb-1.5">
+            {/* Step 6: explicit htmlFor + id — screen readers associate label with input */}
+            <label htmlFor="contact-name" className="font-mono text-xs tracking-widest text-ash-500 uppercase block mb-1.5">
               Name
             </label>
             <input
+              id="contact-name"
               type="text"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -239,10 +255,11 @@ function ContactForm() {
             />
           </div>
           <div>
-            <label className="font-mono text-[10px] tracking-widest text-ash-500 uppercase block mb-1.5">
+            <label htmlFor="contact-email" className="font-mono text-xs tracking-widest text-ash-500 uppercase block mb-1.5">
               Email
             </label>
             <input
+              id="contact-email"
               type="email"
               value={form.email}
               onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
@@ -255,10 +272,11 @@ function ContactForm() {
         </div>
 
         <div>
-          <label className="font-mono text-[10px] tracking-widest text-ash-500 uppercase block mb-1.5">
+          <label htmlFor="contact-message" className="font-mono text-xs tracking-widest text-ash-500 uppercase block mb-1.5">
             Message
           </label>
           <textarea
+            id="contact-message"
             value={form.message}
             onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
             placeholder="What's on your mind?"
@@ -295,7 +313,8 @@ function ContactForm() {
           <button
             onClick={handleSubmit}
             disabled={state === 'loading' || !form.name || !form.email || !form.message}
-            className="flex-1 font-mono text-sm tracking-wider py-3 rounded-xl transition-all duration-200"
+            aria-disabled={state === 'loading' || !form.name || !form.email || !form.message}
+            className="flex-1 font-mono text-sm tracking-wider py-3 rounded-xl transition-all duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-white/30"
             style={{
               background: state === 'loading' ? 'rgba(240,240,240,0.05)' : 'rgba(240,240,240,0.1)',
               border: '1px solid rgba(240,240,240,0.25)',
@@ -347,7 +366,7 @@ export default function ContactSection() {
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
 
   return (
-    <section id="contact" ref={ref} className="relative py-24 md:py-36 px-6 md:px-16 lg:px-24 overflow-hidden">
+    <section id="contact" ref={ref} className="relative py-24 md:py-36 px-6 md:px-10 lg:px-16 overflow-hidden">
       {/* Ambient light from top (echo of hero sun) */}
       <motion.div
         className="absolute top-0 left-0 right-0 pointer-events-none"
@@ -366,7 +385,7 @@ export default function ContactSection() {
         style={{ background: 'linear-gradient(to right, transparent, rgba(240,240,240,0.08), transparent)' }}
       />
 
-      <div className="max-w-3xl mx-auto relative z-10">
+      <div className="w-full max-w-5xl mx-auto relative z-10">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}

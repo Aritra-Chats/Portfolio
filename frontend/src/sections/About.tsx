@@ -2,25 +2,33 @@ import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { personal, metrics, images } from '../data/portfolio';
 
-function MetricCard({ label, value, index }: { label: string; value: string; index: number }) {
-  const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
+// Step 7: single parent inView drives all metric cards — removes 8 IO instances
+function MetricCard({
+  label,
+  value,
+  index,
+  parentInView,
+}: {
+  label: string;
+  value: string;
+  index: number;
+  parentInView: boolean;
+}) {
   return (
     <motion.div
-      ref={ref}
       initial={{ opacity: 0, y: 16 }}
-      animate={inView ? { opacity: 1, y: 0 } : {}}
+      animate={parentInView ? { opacity: 1, y: 0 } : {}}
       transition={{ delay: index * 0.07, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-      className="rounded-xl p-4 text-center group"
+      className="rounded-xl p-4 text-center group cursor-default"
       style={{
         background: 'rgba(16,16,16,0.8)',
         border: '1px solid rgba(240,240,240,0.07)',
-        transition: 'border-color 0.25s',
+        // Step 7: CSS transition instead of JS style mutation keeps hover in GPU compositor
+        transition: 'border-color 0.25s, box-shadow 0.25s',
       }}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(240,240,240,0.2)';
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(240,240,240,0.07)';
+      whileHover={{
+        borderColor: 'rgba(240,240,240,0.2)',
+        boxShadow: '0 0 20px rgba(240,240,240,0.08)',
       }}
     >
       <p className="font-display text-3xl md:text-4xl tracking-wider text-ash-100 group-hover:text-white transition-colors">
@@ -34,6 +42,7 @@ function MetricCard({ label, value, index }: { label: string; value: string; ind
 }
 
 export default function AboutSection() {
+  // Single IO for the whole section — drives both header and all metric cards
   const { ref, inView } = useInView({ triggerOnce: true, threshold: 0.1 });
 
   const paragraphs = personal.bioLong.split('\n\n');
@@ -88,7 +97,7 @@ export default function AboutSection() {
               </div>
             </motion.div>
 
-            {/* Bio paragraphs */}
+            {/* Bio paragraphs — Step 3: 15px floor instead of text-sm to ensure legibility */}
             <div className="space-y-5">
               {paragraphs.map((para, i) => (
                 <motion.p
@@ -96,8 +105,11 @@ export default function AboutSection() {
                   initial={{ opacity: 0, y: 12 }}
                   animate={inView ? { opacity: 1, y: 0 } : {}}
                   transition={{ delay: 0.1 + i * 0.1, duration: 0.6 }}
-                  className="font-body text-sm md:text-base leading-relaxed"
-                  style={{ color: i === 0 ? '#d0d0d0' : '#888' }}
+                  className="font-body leading-relaxed"
+                  style={{
+                    fontSize: 15,               // Step 3: explicit floor — text-sm can dip to ~12px at narrow viewports
+                    color: i === 0 ? '#d0d0d0' : '#888',
+                  }}
                 >
                   {para}
                 </motion.p>
@@ -134,13 +146,17 @@ export default function AboutSection() {
               className="mt-6 flex items-center gap-4"
             >
               <div className="flex items-center gap-1.5">
+                {/* Step 6: aria-label so SR announces the status */}
                 <span
                   className="inline-block w-2 h-2 rounded-full"
                   style={{ background: '#f0f0f0', boxShadow: '0 0 8px rgba(240,240,240,0.5)' }}
+                  aria-hidden="true"
                 />
-                <span className="font-mono text-xs text-ash-400">Open to Work</span>
+                <span className="font-mono text-xs text-ash-400" aria-label="Currently open to work">
+                  Open to Work
+                </span>
               </div>
-              <span className="font-mono text-xs text-ash-600">·</span>
+              <span className="font-mono text-xs text-ash-600" aria-hidden="true">·</span>
               <span className="font-mono text-xs text-ash-500">{personal.location}</span>
             </motion.div>
           </div>
@@ -174,9 +190,7 @@ export default function AboutSection() {
                   className="absolute inset-0"
                   style={{ background: 'linear-gradient(to top, rgba(10,10,10,0.5) 0%, transparent 50%)' }}
                 />
-                <div
-                  className="absolute bottom-4 left-4 right-4"
-                >
+                <div className="absolute bottom-4 left-4 right-4">
                   <p className="font-mono text-[10px] text-ash-300 tracking-wider">
                     KIIT CSE · Class of 2027
                   </p>
@@ -185,10 +199,16 @@ export default function AboutSection() {
               </div>
             </motion.div>
 
-            {/* Metrics grid */}
+            {/* Metrics grid — Step 7: parentInView prop avoids 8 IO instances */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 gap-3">
               {metrics.map((m, i) => (
-                <MetricCard key={m.label} label={m.label} value={m.value} index={i} />
+                <MetricCard
+                  key={m.label}
+                  label={m.label}
+                  value={m.value}
+                  index={i}
+                  parentInView={inView}
+                />
               ))}
             </div>
 
